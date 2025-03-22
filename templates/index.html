@@ -6,48 +6,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adivina el Jugador Campeón</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .progreso {
+            margin-top: 10px;
+        }
+        .respuesta-btn {
+            width: 100px;
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
 </head>
 
 <body>
     <div class="container mt-5">
-        <h2 class="text-center">Adivina el Jugador Campeón</h2>
+        <h2 class="text-center mb-4">🔍 Adivina el Jugador Campeón</h2>
 
-        <div id="pregunta" class="mt-4 text-center">
+        <div class="text-center mb-3">
+            <div class="text-center mt-4">
+                <button class="btn btn-secondary" onclick="reiniciarJuego()">🔄 Reiniciar</button></br>
+            </div>
+            <div class="progress">
+                <div id="barraProgreso" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+            </div>
+        </div>
+        <div id="pregunta" class="text-center fade-in">
             <h4>{{ pregunta }}</h4>
-            <div class="mt-3">
-                <button class="btn btn-success me-2" onclick="enviarRespuesta('si')">Sí</button>
-                <button class="btn btn-danger" onclick="enviarRespuesta('no')">No</button>
+            <div class="mt-4">
+                <button class="btn btn-success respuesta-btn me-3" onclick="enviarRespuesta('si')">Sí</button>
+                <button class="btn btn-danger respuesta-btn" onclick="enviarRespuesta('no')">No</button>
             </div>
         </div>
 
-        <div id="resultado" class="mt-4 text-center"></div>
+        <div id="resultado" class="mt-5 text-center"></div>
+
+        <div id="historial" class="mt-4">
+            <h5>Historial:</h5>
+            <ul class="list-group" id="listaHistorial"></ul>
+        </div>
     </div>
 
     <script>
+        let preguntaIndex = 0;
+        const totalPreguntas = {{ pregunta|length if pregunta else 1 }};
+
         async function enviarRespuesta(respuesta) {
             const res = await fetch("/respuesta", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ respuesta })
             });
             const data = await res.json();
 
+            agregarHistorial(respuesta);
+            actualizarProgreso();
+
             if (data.fin) {
                 document.getElementById("pregunta").style.display = "none";
-                document.getElementById("resultado").innerHTML = `<div class="alert alert-info">${data.mensaje}</div>`;
-            } else {
-                document.getElementById("pregunta").innerHTML = `<h4>${data.pregunta}</h4>
-                    <div class='mt-3'>
-                        <button class='btn btn-success me-2' onclick=\"enviarRespuesta('si')\">Sí</button>
-                        <button class='btn btn-danger' onclick=\"enviarRespuesta('no')\">No</button>
+                document.getElementById("resultado").innerHTML = `
+                    <div class="alert alert-info fade-in">
+                        <strong>${data.mensaje}</strong>
                     </div>`;
+            } else {
+                document.getElementById("pregunta").innerHTML = `
+                    <h4>${data.pregunta}</h4>
+                    <div class='mt-4'>
+                        <button class='btn btn-success respuesta-btn me-3' onclick=\"enviarRespuesta('si')\">Sí</button>
+                        <button class='btn btn-danger respuesta-btn' onclick=\"enviarRespuesta('no')\">No</button>
+                    </div>`;
+                preguntaIndex++;
             }
+        }
+
+        function actualizarProgreso() {
+            const progreso = Math.min((preguntaIndex + 1) * 100 / 14, 100);
+            const barra = document.getElementById("barraProgreso");
+            barra.style.width = progreso + "%";
+            barra.textContent = Math.round(progreso) + "%";
+        }
+
+        function agregarHistorial(respuesta) {
+            const historial = document.getElementById("listaHistorial");
+            const item = document.createElement("li");
+            item.className = "list-group-item";
+            item.textContent = `Pregunta ${preguntaIndex + 1}: ${respuesta === 'si' ? 'Sí' : 'No'}`;
+            historial.appendChild(item);
+        }
+
+        function reiniciarJuego() {
+            window.location.href = "/";
         }
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>
